@@ -31,7 +31,7 @@ def extract(source_dir: str, dest_dir: str, noise_level: int, window_size: int, 
     images = ImageFolderDataset(source_dir=source_dir,
                                 transform=np.array)
 
-    for i, img in tqdm(enumerate(images), total=len(images)):
+    for i, img in tqdm(enumerate(images), total=len(images), desc="Noises"):
         denoised = cv2.fastNlMeansDenoisingColored(
             img, None, noise_level, noise_level, window_size, window_size * 3
         )

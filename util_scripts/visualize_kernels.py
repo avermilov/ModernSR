@@ -17,7 +17,7 @@ if kernels_path is None or results_path is None:
 
 kernel_names = []
 kernels = []
-for filename in tqdm(os.listdir(kernels_path)):
+for filename in tqdm(os.listdir(kernels_path), desc="Kernels"):
     abs_path = os.path.join(kernels_path, filename)
     try:
         mat = sio.loadmat(abs_path)

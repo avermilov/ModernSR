@@ -23,7 +23,7 @@ if dest_dir[-1] != "/":
 
 cap = cv2.VideoCapture(source_path)
 
-for i in tqdm(range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))):
+for i in tqdm(range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))), desc="Frames"):
     suc, img = cap.read()
     if not suc:
         raise Exception("Couldn't read frame:", i)
