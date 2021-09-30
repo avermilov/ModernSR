@@ -24,7 +24,7 @@ class Generator(nn.Module):
 
         self.scale = scale
         # First layer
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
         # 16/23 ResidualInResidualDenseBlock layer
         rrdb_blocks = []
@@ -33,20 +33,20 @@ class Generator(nn.Module):
         self.trunk = nn.Sequential(*rrdb_blocks)
 
         # Second conv layer post residual blocks
-        self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+        self.conv2 = nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
         # Upsampling layers
-        self.up1 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
-        self.up2 = nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1)
+        self.up1 = nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=1)
+        self.up2 = nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
         # Next layer after upper sampling
         self.conv3 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=1),
             nn.LeakyReLU(negative_slope=0.2, inplace=True)
         )
 
         # Final output layer
-        self.conv4 = nn.Conv2d(64, 3, kernel_size=3, stride=1, padding=1)
+        self.conv4 = nn.Conv2d(64, 3, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out1 = self.conv1(x)
@@ -74,22 +74,22 @@ class ResidualDenseBlock(nn.Module):
         """
         super(ResidualDenseBlock, self).__init__()
         self.conv1 = nn.Sequential(
-            nn.Conv2d(channels + 0 * growth_channels, growth_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(channels + 0 * growth_channels, growth_channels, kernel_size=(3, 3), stride=(1, 1), padding=1),
             nn.LeakyReLU(negative_slope=0.2, inplace=True)
         )
         self.conv2 = nn.Sequential(
-            nn.Conv2d(channels + 1 * growth_channels, growth_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(channels + 1 * growth_channels, growth_channels, kernel_size=(3, 3), stride=(1, 1), padding=1),
             nn.LeakyReLU(negative_slope=0.2, inplace=True)
         )
         self.conv3 = nn.Sequential(
-            nn.Conv2d(channels + 2 * growth_channels, growth_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(channels + 2 * growth_channels, growth_channels, kernel_size=(3, 3), stride=(1, 1), padding=1),
             nn.LeakyReLU(negative_slope=0.2, inplace=True)
         )
         self.conv4 = nn.Sequential(
-            nn.Conv2d(channels + 3 * growth_channels, growth_channels, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(channels + 3 * growth_channels, growth_channels, kernel_size=(3, 3), stride=(1, 1), padding=1),
             nn.LeakyReLU(negative_slope=0.2, inplace=True)
         )
-        self.conv5 = nn.Conv2d(channels + 4 * growth_channels, channels, kernel_size=3, stride=1, padding=1)
+        self.conv5 = nn.Conv2d(channels + 4 * growth_channels, channels, kernel_size=(3, 3), stride=(1, 1), padding=1)
 
         self.scale_ratio = scale_ratio
 
@@ -159,6 +159,7 @@ def esrgan16(scale, pretrained: bool = False, progress: bool = True) -> Generato
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
+        scale: upscale factor of model
     """
     return _esrgan("esrgan16", 16, pretrained, progress, scale)
 
@@ -169,5 +170,6 @@ def esrgan23(scale, pretrained: bool = False, progress: bool = True) -> Generato
     Args:
         pretrained (bool): If True, returns a model pre-trained on ImageNet
         progress (bool): If True, displays a progress bar of the download to stderr
+        scale: upscale_factor of model
     """
     return _esrgan("esrgan23", 23, pretrained, progress, scale)

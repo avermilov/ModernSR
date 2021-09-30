@@ -22,7 +22,7 @@ class Generator(nn.Module):
         num_upsampling_block = int(math.log(upscale_factor, 2))
         # First layer.
         self.conv1 = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=9, stride=1, padding=4),
+            nn.Conv2d(3, 64, kernel_size=(9, 9), stride=(1, 1), padding=4),
             nn.PReLU()
         )
 
@@ -34,7 +34,7 @@ class Generator(nn.Module):
 
         # Second conv layer post residual blocks.
         self.conv2 = nn.Sequential(
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1, bias=False),
+            nn.Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=1, bias=False),
             nn.BatchNorm2d(64)
         )
 
@@ -45,7 +45,7 @@ class Generator(nn.Module):
         self.upsampling = nn.Sequential(*upsampling)
 
         # Final output layer.
-        self.conv3 = nn.Conv2d(64, 3, kernel_size=9, stride=1, padding=4)
+        self.conv3 = nn.Conv2d(64, 3, kernel_size=(9, 9), stride=(1, 1), padding=4)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out1 = self.conv1(x)
@@ -67,7 +67,7 @@ class UpsampleBlock(nn.Module):
             channels (int): Number of channels in the input image. (default: 256)
         """
         super(UpsampleBlock, self).__init__()
-        self.conv = nn.Conv2d(channels // 4, channels, kernel_size=3, stride=1, padding=1)
+        self.conv = nn.Conv2d(channels // 4, channels, kernel_size=(3, 3), stride=(1, 1), padding=1)
         self.pixel_shuffle = nn.PixelShuffle(upscale_factor=2)
         self.prelu = nn.PReLU()
 
@@ -88,10 +88,10 @@ class ResidualBlock(nn.Module):
             channels (int): Number of channels in the input image. (default: 64)
         """
         super(ResidualBlock, self).__init__()
-        self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(channels, channels, kernel_size=(3, 3), stride=(1, 1), padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(channels)
         self.prelu = nn.PReLU()
-        self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(channels, channels, kernel_size=(3, 3), stride=(1, 1), padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(channels)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
