@@ -1,34 +1,15 @@
 import argparse
-import os
 
-import PIL
 import cv2
 import numpy as np
-from torch.utils.data import Dataset
 from tqdm import tqdm
 
-
-class ImageFolderDataset(Dataset):
-    def __init__(self, source_dir: str, transform=None):
-        self.main_dir = source_dir
-        self.transform = transform
-        self.do_transforms = transform is not None
-        self.total_imgs = os.listdir(source_dir)
-
-    def __len__(self):
-        return len(self.total_imgs)
-
-    def __getitem__(self, idx):
-        img_loc = os.path.join(self.main_dir, self.total_imgs[idx])
-        image = PIL.Image.open(img_loc).convert("RGB")
-        if self.do_transforms:
-            image = self.transform(image)
-        return image
+from dl_module.datasets import ImageFolderDataset
 
 
-def extract(source_dir: str, dest_dir: str, noise_level: int, window_size: int, kernel_size: int,
-            operation_type: str) -> None:
-    images = ImageFolderDataset(source_dir=source_dir,
+def extract_noise(source_dir: str, dest_dir: str, noise_level: int, window_size: int, kernel_size: int,
+                  operation_type: str) -> None:
+    images = ImageFolderDataset(image_dir=source_dir,
                                 transform=np.array)
 
     for i, img in tqdm(enumerate(images), total=len(images), desc="Noises"):
@@ -71,4 +52,4 @@ if __name__ == "__main__":
 
     if args.dest_dir[-1] != "/":
         args.dest_dir += "/"
-    extract(args.source_dir, args.dest_dir, args.noise_level, args.window_size, args.blur_kernel_size, args.operation)
+    extract_noise(args.source_dir, args.dest_dir, args.noise_level, args.window_size, args.blur_kernel_size, args.operation)

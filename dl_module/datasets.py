@@ -82,38 +82,40 @@ class SuperResolutionDataset(Dataset):
                                          mode=self.downscale_mode)
             lowres_image = torch.clamp(lowres_image, -1, 1)
             lowres_image = torch.squeeze(lowres_image)
+
         if self.apply_noise:
             noise_idx = np.random.randint(0, len(self.noise_dataset))
             noise_patch = self.noise_dataset[noise_idx]
             lowres_image += noise_patch
             lowres_image = torch.clamp(lowres_image, -1, 1)
+
         return lowres_image, gt
 
     def __len__(self):
         return len(self.image_dataset)
 
 
-img_tfms = tfms.Compose([
-    tfms.ToTensor(),
-    tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    tfms.RandomHorizontalFlip(),
-    tfms.RandomVerticalFlip(),
-    tfms.CenterCrop(512)
-])
-noise_tfms = tfms.Compose([
-    tfms.ToTensor(),
-    tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-    tfms.RandomCrop(256, 256)
-])
-path = "/home/artermiloff/PycharmProjects/TmpSR/"
-srds = SuperResolutionDataset(scale=2, image_dir=path + "/Datasets/DIV2K/Valid/Valid/",
-                              noises_dir=path + "Noises/noises_s3w7k0/noises_s3w7k0",
-                              kernels_dir=None, image_transforms=img_tfms,
-                              noise_transforms=noise_tfms, downscale_mode="nearest")
-lr, gt = srds[0]
-gt = torch.clamp((gt + 1) / 2, 0, 1)
-lr = torch.clamp((lr + 1) / 2, 0, 1)
-dl = DataLoader(srds, batch_size=4)
-
-torchvision.utils.save_image(gt, "gt.png")
-torchvision.utils.save_image(lr, "lr.png")
+# img_tfms = tfms.Compose([
+#     tfms.ToTensor(),
+#     tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+#     tfms.RandomHorizontalFlip(),
+#     tfms.RandomVerticalFlip(),
+#     tfms.CenterCrop(512)
+# ])
+# noise_tfms = tfms.Compose([
+#     tfms.ToTensor(),
+#     tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+#     tfms.RandomCrop(256, 256)
+# ])
+# path = "/home/artermiloff/PycharmProjects/TmpSR/"
+# srds = SuperResolutionDataset(scale=2, image_dir=path + "/Datasets/DIV2K/Valid/Valid/",
+#                               noises_dir=path + "Noises/noises_s3w7k0/noises_s3w7k0",
+#                               kernels_dir=None, image_transforms=img_tfms,
+#                               noise_transforms=noise_tfms, downscale_mode="nearest")
+# lr, gt = srds[0]
+# gt = torch.clamp((gt + 1) / 2, 0, 1)
+# lr = torch.clamp((lr + 1) / 2, 0, 1)
+# dl = DataLoader(srds, batch_size=4)
+#
+# torchvision.utils.save_image(gt, "gt.png")
+# torchvision.utils.save_image(lr, "lr.png")
