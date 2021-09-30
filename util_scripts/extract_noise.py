@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-from dl_module.datasets import ImageFolderDataset
+from dl_module.dataset import ImageFolderDataset
 
 
 def extract_noise(source_dir: str, dest_dir: str, noise_level: int, window_size: int, kernel_size: int,
