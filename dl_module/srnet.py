@@ -1,5 +1,8 @@
 import warnings
 
+import pytorch_lightning
+import torchmetrics
+
 from dl_module.model import get_model
 
 if True:
@@ -16,7 +19,9 @@ from torch.optim.lr_scheduler import ExponentialLR
 from torch.utils.data import DataLoader
 
 from dl_module.dataset import SuperResolutionDataset
-from model_zoo.rdn import RDN
+import lpips
+
+pytorch_lightning.seed_everything(seed=42)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -50,6 +55,7 @@ class LitSuperResolutionModule(pl.LightningModule):
     def __init__(self,
                  scale: int,
                  sr_model: nn.Module,
+                 log_metrics: bool = True,
                  log_images: bool = True,
                  val_img_log_count: int = 10):
         super().__init__()
@@ -63,6 +69,13 @@ class LitSuperResolutionModule(pl.LightningModule):
         self.running_train_loss = self.running_train_count = 0
         self.running_valid_loss = self.running_valid_count = 0
         self.logged_images = 0
+
+        self.log_metrics = log_metrics
+        if log_metrics:
+            self.lpips_alex = lpips.LPIPS(net="alex").to(DEVICE)
+            self.lpips_vgg = lpips.LPIPS(net="vgg").to(DEVICE)
+            # self.ssim = torchmetrics.SSIM()
+            self.psnr = torchmetrics.PSNR()
 
     def forward(self, x):
         y_hat = self.sr_model(x)
@@ -87,32 +100,10 @@ class LitSuperResolutionModule(pl.LightningModule):
 
         # logging and tracking
         if self.log_images and self.logged_images < self.val_img_log_count:
-            logged_so_far_count = self.logged_images
-            gt = torch.clamp((gt + 1) / 2, min=0, max=1)
-            sr = torch.clamp((sr + 1) / 2, min=0, max=1)
-            for i in range(min(gt.shape[0], self.val_img_log_count - logged_so_far_count)):
-                # save gt image only twice (second is for tensorboard slider matching), since it will not change
-                if self.current_epoch == 0:
-                    self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/GT",
-                                                     gt[i], 0)
-                    self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/GT",
-                                                     gt[i], 1)
+            self._log_images(gt, lr, sr)
 
-                # save bicubically upscaled lr image
-                upscaled_lr = torch.squeeze(F.interpolate(torch.unsqueeze(lr[i], dim=0),
-                                                          size=lr.shape[-1] * self.scale,
-                                                          mode="bicubic"))
-                upscaled_lr = torch.clamp((upscaled_lr + 1) / 2, min=0, max=1)
-                self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/LR BI",
-                                                 upscaled_lr,
-                                                 self.current_epoch)
-
-                # save model output upscaled image
-                self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/SR",
-                                                 sr[i],
-                                                 self.current_epoch)
-
-                self.logged_images += 1
+        if self.log_metrics:
+            self._log_metrics(sr, gt)
 
         self.running_valid_loss += loss.item()
         self.running_valid_count += 1
@@ -132,6 +123,45 @@ class LitSuperResolutionModule(pl.LightningModule):
     def configure_optimizers(self):
         gen_optimizer = torch.optim.Adam(self.sr_model.parameters(), lr=3e-4, betas=(0.5, 0.999))
         return [gen_optimizer], [ExponentialLR(gen_optimizer, gamma=0.995)]
+
+    def _log_images(self, gt, lr, sr) -> None:
+        logged_so_far_count = self.logged_images
+        gt = torch.clamp((gt + 1) / 2, min=0, max=1)
+        sr = torch.clamp((sr + 1) / 2, min=0, max=1)
+        for i in range(min(gt.shape[0], self.val_img_log_count - logged_so_far_count)):
+            # save gt image only twice (second is for tensorboard slider matching), since it will not change
+            if self.current_epoch == 0:
+                self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/GT",
+                                                 gt[i], 0)
+                self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/GT",
+                                                 gt[i], 1)
+
+            # save bicubically upscaled lr image
+            upscaled_lr = torch.squeeze(F.interpolate(torch.unsqueeze(lr[i], dim=0),
+                                                      size=lr.shape[-1] * self.scale,
+                                                      mode="bicubic"))
+            upscaled_lr = torch.clamp((upscaled_lr + 1) / 2, min=0, max=1)
+            self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/LR BI",
+                                             upscaled_lr,
+                                             self.current_epoch)
+
+            # save model output upscaled image
+            self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/SR",
+                                             sr[i],
+                                             self.current_epoch)
+
+            self.logged_images += 1
+
+    def _log_metrics(self, sr, gt) -> None:
+        psnr_score = self.psnr(sr, gt)
+        # ssim_score = self.ssim(sr, gt)
+        lpips_alex_score = self.lpips_alex(sr, gt)
+        lpips_vgg_score = self.lpips_vgg(sr, gt)
+
+        self.log("Metrics/PSNR", psnr_score)
+        # self.log("Metrics/SSIM", ssim_score)
+        self.log("Metrics/LPIPS Alex", lpips_alex_score)
+        self.log("Metrics/LPIPS VGG", lpips_vgg_score)
 
 
 img_tfms = tfms.Compose([
@@ -169,7 +199,7 @@ train_loader = DataLoader(srtrain, num_workers=8, batch_size=32)
 valid_loader = DataLoader(srval, num_workers=8, batch_size=32)
 litmodel = LitSuperResolutionModule(scale=2, sr_model=get_model(scale=2, model_type=input("MODEL:")),
                                     log_images=True,
-                                    val_img_log_count=40)
+                                    val_img_log_count=40, log_metrics=True)
 trainer = pl.Trainer(gpus=[0], max_epochs=20, logger=pl_loggers.TensorBoardLogger("../logs", default_hp_metric=False),
                      deterministic=True)
 trainer.fit(litmodel, train_loader, valid_loader)
