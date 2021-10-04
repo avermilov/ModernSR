@@ -10,7 +10,8 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def get_loss(d: Dict) -> nn.Module:
-    loss_type = d["loss_type"].lower()
+    d = d["loss"]
+    loss_type = d["type"].lower()
     if loss_type == "l1":
         return nn.L1Loss()
     elif loss_type == "vgg":
