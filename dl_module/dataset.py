@@ -1,15 +1,50 @@
 import os
 import os.path
 import random
+from typing import Dict
 
 import PIL
-import torch
-import torchvision.transforms as tfms
-import torchvision.utils
-from torch.utils.data import Dataset, DataLoader
-import scipy.io as sio
 import numpy as np
+import scipy.io as sio
+import torch
 import torch.nn.functional as F
+from torch.utils.data import Dataset
+import torchvision.transforms as tfms
+
+
+def get_train_val_dataset(d: Dict,
+                          train_tfms: tfms.Compose,
+                          train_noise_tfms: tfms.Compose,
+                          val_tfms: tfms.Compose,
+                          val_noise_tfms: tfms.Compose) -> (Dataset, Dataset):
+    scale = d["scale"]
+
+    d = d["paths"]
+
+    train_dir = d["train_dir"]
+    validation_dir = d["validation_dir"]
+
+    train_kernels_dir = d["train_kernels_dir"]
+    train_noises_dir = d["train_noises_dir"]
+
+    validation_kernels_dir = d["validation_kernels_dir"]
+    validation_noises_dir = d["validation_noises_dir"]
+
+    train_ds = SuperResolutionDataset(scale=scale,
+                                      image_dir=train_dir,
+                                      noises_dir=train_noises_dir,
+                                      kernels_dir=train_kernels_dir,
+                                      image_transforms=train_tfms,
+                                      noise_transforms=train_noise_tfms)
+
+    val_ds = SuperResolutionDataset(scale=scale,
+                                    image_dir=validation_dir,
+                                    noises_dir=validation_noises_dir,
+                                    kernels_dir=validation_kernels_dir,
+                                    image_transforms=val_tfms,
+                                    noise_transforms=val_noise_tfms)
+
+    return train_ds, val_ds
 
 
 def _load_kernels(kernels_dir: str):
@@ -27,14 +62,13 @@ class ImageFolderDataset(Dataset):
         self.main_dir = image_dir
         self.transform = transform
         self.do_transforms = transform is not None
-        self.total_imgs = sorted(os.listdir(image_dir))
-        print(self.total_imgs)
+        self.total_images = sorted(os.listdir(image_dir))
 
     def __len__(self):
-        return len(self.total_imgs)
+        return len(self.total_images)
 
     def __getitem__(self, idx):
-        img_loc = os.path.join(self.main_dir, self.total_imgs[idx])
+        img_loc = os.path.join(self.main_dir, self.total_images[idx])
         image = PIL.Image.open(img_loc).convert("RGB")
         if self.do_transforms:
             image = self.transform(image)
@@ -67,55 +101,29 @@ class SuperResolutionDataset(Dataset):
 
     def __getitem__(self, idx):
         gt = self.image_dataset[idx]
-        lowres_image = gt
+        lr_image = gt
 
         if self.apply_kernel:
             kernel = random.choice(self.kernels)
-            lowres_image = torch.unsqueeze(lowres_image, dim=0)
+            lr_image = torch.unsqueeze(lr_image, dim=0)
             padding = (kernel.shape[-1] - 1) // 2
-            lowres_image = F.pad(lowres_image, [padding] * 4, mode="reflect")
-            lowres_image = torch.conv2d(lowres_image, kernel, stride=self.scale, groups=3)
-            lowres_image = torch.squeeze(lowres_image)
+            lr_image = F.pad(lr_image, [padding] * 4, mode="reflect")
+            lr_image = torch.conv2d(lr_image, kernel, stride=self.scale, groups=3)
+            lr_image = torch.squeeze(lr_image)
         else:
-            lowres_image = F.interpolate(torch.unsqueeze(lowres_image, dim=0),
-                                         size=lowres_image.shape[-1] // self.scale,
-                                         mode=self.downscale_mode)
-            lowres_image = torch.clamp(lowres_image, -1, 1)
-            lowres_image = torch.squeeze(lowres_image)
+            lr_image = F.interpolate(torch.unsqueeze(lr_image, dim=0),
+                                     size=lr_image.shape[-1] // self.scale,
+                                     mode=self.downscale_mode)
+            lr_image = torch.clamp(lr_image, -1, 1)
+            lr_image = torch.squeeze(lr_image)
 
         if self.apply_noise:
             noise_idx = np.random.randint(0, len(self.noise_dataset))
             noise_patch = self.noise_dataset[noise_idx]
-            lowres_image += noise_patch
-            lowres_image = torch.clamp(lowres_image, -1, 1)
+            lr_image += noise_patch
+            lr_image = torch.clamp(lr_image, -1, 1)
 
-        return lowres_image, gt
+        return lr_image, gt
 
     def __len__(self):
         return len(self.image_dataset)
-
-
-# img_tfms = tfms.Compose([
-#     tfms.ToTensor(),
-#     tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-#     tfms.RandomHorizontalFlip(),
-#     tfms.RandomVerticalFlip(),
-#     tfms.CenterCrop(512)
-# ])
-# noise_tfms = tfms.Compose([
-#     tfms.ToTensor(),
-#     tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-#     tfms.RandomCrop(256, 256)
-# ])
-# path = "/home/artermiloff/PycharmProjects/TmpSR/"
-# srds = SuperResolutionDataset(scale=2, image_dir=path + "/Datasets/DIV2K/Valid/Valid/",
-#                               noises_dir=path + "Noises/noises_s3w7k0/noises_s3w7k0",
-#                               kernels_dir=None, image_transforms=img_tfms,
-#                               noise_transforms=noise_tfms, downscale_mode="nearest")
-# lr, gt = srds[0]
-# gt = torch.clamp((gt + 1) / 2, 0, 1)
-# lr = torch.clamp((lr + 1) / 2, 0, 1)
-# dl = DataLoader(srds, batch_size=4)
-#
-# torchvision.utils.save_image(gt, "gt.png")
-# torchvision.utils.save_image(lr, "lr.png")
