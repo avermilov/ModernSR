@@ -22,7 +22,6 @@ from dl_module.model import get_model
 from dl_module.dataset import SuperResolutionDataset
 import lpips
 
-pytorch_lightning.seed_everything(seed=42)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -30,8 +29,8 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 class LitSuperResolutionModule(pl.LightningModule):
     def __init__(self,
                  scale: int,
-                 sr_model: nn.Module,
-                 loss_fn,
+                 sr_model,
+                 criterion,
                  optimizer,
                  scheduler,
                  log_metrics: bool = True,
@@ -40,21 +39,19 @@ class LitSuperResolutionModule(pl.LightningModule):
         super().__init__()
         self.scale = scale
         self.sr_model = sr_model
-        self.loss_fn = loss_fn
+        self.criterion = criterion
         self.sr_optimizer = optimizer
         self.sr_scheduler = scheduler
 
         self.log_images = log_images
         self.val_img_log_count = val_img_log_count
 
-        self.running_train_loss = self.running_train_count = 0
-        self.running_valid_loss = self.running_valid_count = 0
         self.logged_images = 0
 
         self.log_metrics = log_metrics
         if log_metrics:
-            self.lpips_alex = lpips.LPIPS(net="alex").to(DEVICE)
-            self.lpips_vgg = lpips.LPIPS(net="vgg").to(DEVICE)
+            self.lpips_alex = lpips.LPIPS(net="alex", verbose=False).to(DEVICE)
+            self.lpips_vgg = lpips.LPIPS(net="vgg", verbose=False).to(DEVICE)
             # self.ssim = torchmetrics.SSIM()
             self.psnr = torchmetrics.PSNR()
 
@@ -62,22 +59,24 @@ class LitSuperResolutionModule(pl.LightningModule):
         y_hat = self.sr_model(x)
         return y_hat
 
+    def on_validation_start(self) -> None:
+        self.logged_images = 0
+
     def training_step(self, batch, batch_idx):
         lr, gt = batch
         sr = self.sr_model(lr)
-        loss = self.loss_fn(sr, gt)
+        loss = self.criterion(sr, gt)
 
         # logging and tracking
-        self.log("train_loss", loss, on_epoch=True, on_step=True)
-        self.running_train_loss += loss.item()
-        self.running_train_count += 1
+        self.log("Train Loss/Step Wise Loss", loss, on_epoch=False, on_step=True)
+        self.log("Train Loss/Epoch Wise Loss", loss, on_epoch=True, on_step=False)
 
         return loss
 
     def validation_step(self, batch, batch_idx):
         lr, gt = batch
         sr = self.sr_model(lr)
-        loss = self.loss_fn(sr, gt)
+        loss = self.criterion(sr, gt)
 
         # logging and tracking
         if self.log_images and self.logged_images < self.val_img_log_count:
@@ -86,20 +85,7 @@ class LitSuperResolutionModule(pl.LightningModule):
         if self.log_metrics:
             self._log_metrics(sr, gt)
 
-        self.running_valid_loss += loss.item()
-        self.running_valid_count += 1
-
         return loss
-
-    def training_epoch_end(self, outputs):
-        logger = self.logger.experiment
-        logger.add_scalar("train_epoch_loss", self.running_train_loss / self.running_train_count, self.current_epoch)
-        self.running_train_loss = self.running_train_count = 0
-
-    def validation_epoch_end(self, outputs):
-        logger = self.logger.experiment
-        logger.add_scalar("valid_epoch_loss", self.running_valid_loss / self.running_valid_count, self.current_epoch)
-        self.running_valid_count = self.running_valid_loss = self.logged_images = 0
 
     def configure_optimizers(self):
         return [self.sr_optimizer], [self.sr_scheduler]
@@ -108,6 +94,7 @@ class LitSuperResolutionModule(pl.LightningModule):
         logged_so_far_count = self.logged_images
         gt = torch.clamp((gt + 1) / 2, min=0, max=1)
         sr = torch.clamp((sr + 1) / 2, min=0, max=1)
+
         for i in range(min(gt.shape[0], self.val_img_log_count - logged_so_far_count)):
             # save gt image only twice (second is for tensorboard slider matching), since it will not change
             if self.current_epoch == 0:
@@ -135,50 +122,15 @@ class LitSuperResolutionModule(pl.LightningModule):
     def _log_metrics(self, sr, gt) -> None:
         psnr_score = self.psnr(sr, gt)
         # ssim_score = self.ssim(sr, gt)
-        lpips_alex_score = self.lpips_alex(sr, gt)
-        lpips_vgg_score = self.lpips_vgg(sr, gt)
+        lpips_alex_score = torch.mean(self.lpips_alex(sr, gt))
+        lpips_vgg_score = torch.mean(self.lpips_vgg(sr, gt))
 
-        self.log("Metrics/PSNR", psnr_score)
+        self.log("Metrics/Step Wise/PSNR", psnr_score, on_step=True, on_epoch=False)
         # self.log("Metrics/SSIM", ssim_score)
-        self.log("Metrics/LPIPS Alex", lpips_alex_score)
-        self.log("Metrics/LPIPS VGG", lpips_vgg_score)
+        self.log("Metrics/Step Wise/LPIPS Alex", lpips_alex_score, on_step=True, on_epoch=False)
+        self.log("Metrics/Step Wise/LPIPS VGG", lpips_vgg_score, on_step=True, on_epoch=False)
 
-# img_tfms = tfms.Compose([
-#     tfms.ToTensor(),
-#     tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-#     tfms.RandomHorizontalFlip(),
-#     tfms.RandomVerticalFlip(),
-#     tfms.RandomCrop(64, 64)
-# ])
-# noise_tfms = tfms.Compose([
-#     tfms.ToTensor(),
-#     tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-#     tfms.RandomCrop(32, 32)
-# ])
-# val_tfms = tfms.Compose([
-#     tfms.ToTensor(),
-#     tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-#     tfms.CenterCrop(256)
-# ])
-# val_noise_tfms = tfms.Compose([
-#     tfms.ToTensor(),
-#     tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
-#     tfms.RandomCrop(128, 128)
-# ])
-# path = "/home/artermiloff/PycharmProjects/TmpSR/"
-# srval = SuperResolutionDataset(scale=2, image_dir=path + "/Datasets/DIV2K/Valid/Valid/",
-#                                noises_dir=path + "Noises/noises_s3w7k0/noises_s3w7k0",
-#                                kernels_dir=path + "Kernels/kernels_x2", image_transforms=val_tfms,
-#                                noise_transforms=val_noise_tfms)
-# srtrain = SuperResolutionDataset(scale=2, image_dir=path + "/Datasets/DIV2K/Train/Train/",
-#                                  noises_dir=path + "Noises/noises_s3w7k0/noises_s3w7k0",
-#                                  kernels_dir=path + "Kernels/kernels_x2", image_transforms=img_tfms,
-#                                  noise_transforms=noise_tfms, downscale_mode="nearest")
-# train_loader = DataLoader(srtrain, num_workers=8, batch_size=32)
-# valid_loader = DataLoader(srval, num_workers=8, batch_size=32)
-# litmodel = LitSuperResolutionModule(scale=2, sr_model=get_model(scale=2, model_type=input("MODEL:")),
-#                                     log_images=True,
-#                                     val_img_log_count=40, log_metrics=True)
-# trainer = pl.Trainer(gpus=[0], max_epochs=20, logger=pl_loggers.TensorBoardLogger("../logs", default_hp_metric=False),
-#                      deterministic=True)
-# trainer.fit(litmodel, train_loader, valid_loader)
+        self.log("Metrics/Epoch Wise/PSNR", psnr_score, on_step=False, on_epoch=True)
+        # self.log("Metrics/SSIM", ssim_score)
+        self.log("Metrics/Epoch Wise/LPIPS Alex", lpips_alex_score, on_step=False, on_epoch=True)
+        self.log("Metrics/Epoch Wise/LPIPS VGG", lpips_vgg_score, on_step=False, on_epoch=True)
