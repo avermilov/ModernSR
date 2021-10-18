@@ -22,7 +22,6 @@ from dl_module.model import get_model
 from dl_module.dataset import SuperResolutionDataset
 import lpips
 
-
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
@@ -35,6 +34,7 @@ class LitSuperResolutionModule(pl.LightningModule):
                  scheduler,
                  log_metrics: bool = True,
                  log_images: bool = True,
+
                  val_img_log_count: int = 10):
         super().__init__()
         self.scale = scale
@@ -46,7 +46,7 @@ class LitSuperResolutionModule(pl.LightningModule):
         self.log_images = log_images
         self.val_img_log_count = val_img_log_count
 
-        self.logged_images = 0
+        self.logged_val_images = self.logged_test_images = 0
 
         self.log_metrics = log_metrics
         if log_metrics:
@@ -59,9 +59,6 @@ class LitSuperResolutionModule(pl.LightningModule):
         y_hat = self.sr_model(x)
         return y_hat
 
-    def on_validation_start(self) -> None:
-        self.logged_images = 0
-
     def training_step(self, batch, batch_idx):
         lr, gt = batch
         sr = self.sr_model(lr)
@@ -73,13 +70,16 @@ class LitSuperResolutionModule(pl.LightningModule):
 
         return loss
 
+    def on_validation_start(self) -> None:
+        self.logged_val_images = 0
+
     def validation_step(self, batch, batch_idx):
         lr, gt = batch
         sr = self.sr_model(lr)
         loss = self.criterion(sr, gt)
 
         # logging and tracking
-        if self.log_images and self.logged_images < self.val_img_log_count:
+        if self.log_images and self.logged_val_images < self.val_img_log_count:
             self._log_images(gt, lr, sr)
 
         if self.log_metrics:
@@ -87,20 +87,31 @@ class LitSuperResolutionModule(pl.LightningModule):
 
         return loss
 
+    def on_test_start(self) -> None:
+        self.logged_test_images = 0
+
+    def test_step(self, batch, batch_idx):
+        sr = self.sr_model(batch)
+
+        logger = self.logger.experiment
+        for img in sr:
+            img = torch.clamp((img + 1) / 2, min=0, max=1)
+            logger.add_image(f"Test Images/Image {self.logged_test_images}", img)
+
     def configure_optimizers(self):
         return [self.sr_optimizer], [self.sr_scheduler]
 
     def _log_images(self, gt, lr, sr) -> None:
-        logged_so_far_count = self.logged_images
+        logged_so_far_count = self.logged_val_images
         gt = torch.clamp((gt + 1) / 2, min=0, max=1)
         sr = torch.clamp((sr + 1) / 2, min=0, max=1)
 
         for i in range(min(gt.shape[0], self.val_img_log_count - logged_so_far_count)):
             # save gt image only twice (second is for tensorboard slider matching), since it will not change
             if self.current_epoch == 0:
-                self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/GT",
+                self.logger.experiment.add_image(f"Val Images/Image {self.logged_val_images:04}/GT",
                                                  gt[i], 0)
-                self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/GT",
+                self.logger.experiment.add_image(f"Val Images/Image {self.logged_val_images:04}/GT",
                                                  gt[i], 1)
 
             # save bicubically upscaled lr image
@@ -108,16 +119,16 @@ class LitSuperResolutionModule(pl.LightningModule):
                                                       size=lr.shape[-1] * self.scale,
                                                       mode="bicubic"))
             upscaled_lr = torch.clamp((upscaled_lr + 1) / 2, min=0, max=1)
-            self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/LR BI",
+            self.logger.experiment.add_image(f"Val Images/Image {self.logged_val_images:04}/LR BI",
                                              upscaled_lr,
                                              self.current_epoch)
 
             # save model output upscaled image
-            self.logger.experiment.add_image(f"Val Images/Image {self.logged_images:04}/SR",
+            self.logger.experiment.add_image(f"Val Images/Image {self.logged_val_images:04}/SR",
                                              sr[i],
                                              self.current_epoch)
 
-            self.logged_images += 1
+            self.logged_val_images += 1
 
     def _log_metrics(self, sr, gt) -> None:
         psnr_score = self.psnr(sr, gt)

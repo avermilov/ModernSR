@@ -3,7 +3,7 @@ from typing import Dict
 import torchvision.transforms as tfms
 
 
-def get_train_val_transforms(d: Dict) -> (tfms.Compose, tfms.Compose, tfms.Compose, tfms.Compose):
+def get_train_val_tfms(d: Dict) -> (tfms.Compose, tfms.Compose, tfms.Compose, tfms.Compose):
     scale = int(d["scale"])
     validate = d["validate"]
 
@@ -40,3 +40,12 @@ def get_train_val_transforms(d: Dict) -> (tfms.Compose, tfms.Compose, tfms.Compo
         ])
 
     return train_tfms, train_noise_tfms, val_tfms, val_noise_tfms
+
+
+def get_test_tfms(d: Dict) -> tfms.Compose:
+    test_tfms = tfms.Compose([
+        tfms.ToTensor(),
+        tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    ])
+
+    return test_tfms

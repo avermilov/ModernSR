@@ -18,3 +18,14 @@ def get_train_val_loader(d: Dict, train_ds: Dataset, val_ds: Dataset) -> (DataLo
         val_loader = DataLoader(val_ds, batch_size=val_batch_size, num_workers=val_workers)
 
     return train_loader, val_loader
+
+
+def get_test_loader(d: Dict, test_ds: Dataset) -> DataLoader:
+    d = d["loaders"]
+
+    test_workers = d["test_workers"]
+    test_batch_size = d["test_batch_size"]
+
+    test_loader = DataLoader(test_ds, batch_size=test_batch_size, num_workers=test_workers)
+
+    return test_loader

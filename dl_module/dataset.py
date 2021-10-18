@@ -12,11 +12,11 @@ from torch.utils.data import Dataset
 import torchvision.transforms as tfms
 
 
-def get_train_val_dataset(d: Dict,
-                          train_tfms: tfms.Compose,
-                          train_noise_tfms: tfms.Compose,
-                          val_tfms: tfms.Compose,
-                          val_noise_tfms: tfms.Compose) -> (Dataset, Dataset):
+def get_train_val_ds(d: Dict,
+                     train_tfms: tfms.Compose,
+                     train_noise_tfms: tfms.Compose,
+                     val_tfms: tfms.Compose,
+                     val_noise_tfms: tfms.Compose) -> (Dataset, Dataset):
     scale = d["scale"]
     validate = d["validate"]
     d = d["paths"]
@@ -44,6 +44,14 @@ def get_train_val_dataset(d: Dict,
                                         noise_transforms=val_noise_tfms)
 
     return train_ds, val_ds
+
+
+def get_test_ds(d: Dict, test_tfms: tfms.Compose) -> Dataset:
+    inference_dir = d["paths"]["test_dir"]
+
+    test_ds = ImageFolderDataset(image_dir=inference_dir, transform=test_tfms)
+
+    return test_ds
 
 
 def _load_kernels(kernels_dir: str):
