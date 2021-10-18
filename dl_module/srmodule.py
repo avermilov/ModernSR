@@ -79,6 +79,10 @@ class LitSuperResolutionModule(pl.LightningModule):
         loss = self.criterion(sr, gt)
 
         # logging and tracking
+        self.log("Validation Loss/Step Wise Loss", loss, on_epoch=False, on_step=True)
+        self.log("Validation Loss/Epoch Wise Loss", loss, on_epoch=True, on_step=False)
+
+        # logging and tracking
         if self.log_images and self.logged_val_images < self.val_img_log_count:
             self._log_images(gt, lr, sr)
 
