@@ -18,18 +18,12 @@ def get_train_val_dataset(d: Dict,
                           val_tfms: tfms.Compose,
                           val_noise_tfms: tfms.Compose) -> (Dataset, Dataset):
     scale = d["scale"]
-
+    validate = d["validate"]
     d = d["paths"]
 
     train_dir = d["train_dir"]
-    validation_dir = d["validation_dir"]
-
     train_kernels_dir = d["train_kernels_dir"]
     train_noises_dir = d["train_noises_dir"]
-
-    validation_kernels_dir = d["validation_kernels_dir"]
-    validation_noises_dir = d["validation_noises_dir"]
-
     train_ds = SuperResolutionDataset(scale=scale,
                                       image_dir=train_dir,
                                       noises_dir=train_noises_dir,
@@ -37,12 +31,17 @@ def get_train_val_dataset(d: Dict,
                                       image_transforms=train_tfms,
                                       noise_transforms=train_noise_tfms)
 
-    val_ds = SuperResolutionDataset(scale=scale,
-                                    image_dir=validation_dir,
-                                    noises_dir=validation_noises_dir,
-                                    kernels_dir=validation_kernels_dir,
-                                    image_transforms=val_tfms,
-                                    noise_transforms=val_noise_tfms)
+    val_ds = None
+    if validate:
+        validation_dir = d["validation_dir"]
+        validation_kernels_dir = d["validation_kernels_dir"]
+        validation_noises_dir = d["validation_noises_dir"]
+        val_ds = SuperResolutionDataset(scale=scale,
+                                        image_dir=validation_dir,
+                                        noises_dir=validation_noises_dir,
+                                        kernels_dir=validation_kernels_dir,
+                                        image_transforms=val_tfms,
+                                        noise_transforms=val_noise_tfms)
 
     return train_ds, val_ds
 
