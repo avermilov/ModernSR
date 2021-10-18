@@ -113,9 +113,9 @@ class LitSuperResolutionModule(pl.LightningModule):
         for i in range(min(gt.shape[0], self.val_img_log_count - logged_so_far_count)):
             # save gt image only twice (second is for tensorboard slider matching), since it will not change
             if self.current_epoch == 0:
-                self.logger.experiment.add_image(f"Val Images/Image {self.logged_val_images:04}/GT",
+                self.logger.experiment.add_image(f"Validation Images/Image {self.logged_val_images:04}/GT",
                                                  gt[i], 0)
-                self.logger.experiment.add_image(f"Val Images/Image {self.logged_val_images:04}/GT",
+                self.logger.experiment.add_image(f"Validation Images/Image {self.logged_val_images:04}/GT",
                                                  gt[i], 1)
 
             # save bicubically upscaled lr image
@@ -123,12 +123,12 @@ class LitSuperResolutionModule(pl.LightningModule):
                                                       size=lr.shape[-1] * self.scale,
                                                       mode="bicubic"))
             upscaled_lr = torch.clamp((upscaled_lr + 1) / 2, min=0, max=1)
-            self.logger.experiment.add_image(f"Val Images/Image {self.logged_val_images:04}/LR BI",
+            self.logger.experiment.add_image(f"Validation Images/Image {self.logged_val_images:04}/LR BI",
                                              upscaled_lr,
                                              self.current_epoch)
 
             # save model output upscaled image
-            self.logger.experiment.add_image(f"Val Images/Image {self.logged_val_images:04}/SR",
+            self.logger.experiment.add_image(f"Validation Images/Image {self.logged_val_images:04}/SR",
                                              sr[i],
                                              self.current_epoch)
 
@@ -140,12 +140,12 @@ class LitSuperResolutionModule(pl.LightningModule):
         lpips_alex_score = torch.mean(self.lpips_alex(sr, gt))
         lpips_vgg_score = torch.mean(self.lpips_vgg(sr, gt))
 
-        self.log("Metrics/Step Wise/PSNR", psnr_score, on_step=True, on_epoch=False)
+        self.log("Validation Metrics/Step Wise/PSNR", psnr_score, on_step=True, on_epoch=False)
         # self.log("Metrics/SSIM", ssim_score)
-        self.log("Metrics/Step Wise/LPIPS Alex", lpips_alex_score, on_step=True, on_epoch=False)
-        self.log("Metrics/Step Wise/LPIPS VGG", lpips_vgg_score, on_step=True, on_epoch=False)
+        self.log("Validation Metrics/Step Wise/LPIPS Alex", lpips_alex_score, on_step=True, on_epoch=False)
+        self.log("Validation Metrics/Step Wise/LPIPS VGG", lpips_vgg_score, on_step=True, on_epoch=False)
 
-        self.log("Metrics/Epoch Wise/PSNR", psnr_score, on_step=False, on_epoch=True)
+        self.log("Validation Metrics/Epoch Wise/PSNR", psnr_score, on_step=False, on_epoch=True)
         # self.log("Metrics/SSIM", ssim_score)
-        self.log("Metrics/Epoch Wise/LPIPS Alex", lpips_alex_score, on_step=False, on_epoch=True)
-        self.log("Metrics/Epoch Wise/LPIPS VGG", lpips_vgg_score, on_step=False, on_epoch=True)
+        self.log("Validation Metrics/Epoch Wise/LPIPS Alex", lpips_alex_score, on_step=False, on_epoch=True)
+        self.log("Validation Metrics/Epoch Wise/LPIPS VGG", lpips_vgg_score, on_step=False, on_epoch=True)

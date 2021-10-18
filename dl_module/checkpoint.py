@@ -10,8 +10,8 @@ def get_checkpont_callback(d: Dict) -> ModelCheckpoint:
     monitor_metric = d["save_metric"].lower()
     assert monitor_metric in ["psnr", "lpips_alex", "lpips_vgg"], "Unknown save metric."
     mode = "max" if monitor_metric == "psnr" else "min"
-    monitor = "Metrics/Epoch Wise/PSNR" if monitor_metric == "psnr" \
-        else "Metrics/Epoch Wise/LPIPS Alex" if monitor_metric == "lpips_alex" else "lpips_vgg"
+    monitor = "Validation Metrics/Epoch Wise/PSNR" if monitor_metric == "psnr" \
+        else "Validation Metrics/Epoch Wise/LPIPS Alex" if monitor_metric == "lpips_alex" else "Validation Metrics/Epoch Wise/LPIPS VGG"
     save_name_format = model + "_{epoch:04d}_" + monitor_metric + "{" + monitor + ":.3f}"
 
     save_top_k = d["save_top_k"]

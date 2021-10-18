@@ -17,7 +17,8 @@ def get_model(d: Dict) -> nn.Module:
         return rdn.RDN(scale_factor=scale, blurpool=False, num_channels=3, num_features=64,
                        growth_rate=64, num_blocks=16, num_layers=8)
     elif model_type == "rdn_blurpool":
-        return rdn.RDN(scale, True, 3, 64, 64, 16, 8)
+        return rdn.RDN(scale_factor=scale, blurpool=True, num_channels=3, num_features=64,
+                       growth_rate=64, num_blocks=16, num_layers=8)
     elif model_type.startswith("rrdb"):
         num_rrdb_blocks = int(model_type[model_type.find("b") + 1:])
         return rrdb.Generator(scale=scale, num_rrdb_blocks=num_rrdb_blocks)
