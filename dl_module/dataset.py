@@ -1,29 +1,28 @@
 import os
 import os.path
 import random
-from typing import Dict
 
 import PIL
 import numpy as np
 import scipy.io as sio
 import torch
 import torch.nn.functional as F
-from torch.utils.data import Dataset
 import torchvision.transforms as tfms
+from torch.utils.data import Dataset
+
+from utils.config import Config
 
 
-def get_train_val_ds(d: Dict,
+def get_train_val_ds(cfg: Config,
                      train_tfms: tfms.Compose,
                      train_noise_tfms: tfms.Compose,
                      val_tfms: tfms.Compose,
                      val_noise_tfms: tfms.Compose) -> (Dataset, Dataset):
-    scale = d["scale"]
-    validate = d["validate"]
-    d = d["paths"]
+    scale = cfg.general.scale
 
-    train_dir = d["train_dir"]
-    train_kernels_dir = d["train_kernels_dir"]
-    train_noises_dir = d["train_noises_dir"]
+    train_dir = cfg.training.image_dir
+    train_kernels_dir = cfg.training.kernel_dir
+    train_noises_dir = cfg.training.noise_dir
     train_ds = SuperResolutionDataset(scale=scale,
                                       image_dir=train_dir,
                                       noises_dir=train_noises_dir,
@@ -32,10 +31,10 @@ def get_train_val_ds(d: Dict,
                                       noise_transforms=train_noise_tfms)
 
     val_ds = None
-    if validate:
-        validation_dir = d["validation_dir"]
-        validation_kernels_dir = d["validation_kernels_dir"]
-        validation_noises_dir = d["validation_noises_dir"]
+    if hasattr(cfg, "validation"):
+        validation_dir = cfg.validation.image_dir
+        validation_kernels_dir = cfg.validation.kernel_dir
+        validation_noises_dir = cfg.validation.noise_dir
         val_ds = SuperResolutionDataset(scale=scale,
                                         image_dir=validation_dir,
                                         noises_dir=validation_noises_dir,
@@ -46,8 +45,16 @@ def get_train_val_ds(d: Dict,
     return train_ds, val_ds
 
 
-def get_test_ds(d: Dict, test_tfms: tfms.Compose) -> Dataset:
-    inference_dir = d["paths"]["test_dir"]
+def get_test_ds(cfg: Config, test_tfms: tfms.Compose) -> Dataset:
+    test_dir = cfg.test.image_dir
+
+    test_ds = ImageFolderDataset(image_dir=test_dir, transform=test_tfms)
+
+    return test_ds
+
+
+def get_inference_ds(cfg: Config, test_tfms: tfms.Compose) -> Dataset:
+    inference_dir = cfg.inference.in_dir
 
     test_ds = ImageFolderDataset(image_dir=inference_dir, transform=test_tfms)
 

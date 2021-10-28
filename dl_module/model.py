@@ -1,14 +1,13 @@
-from typing import Dict
-
 import torch.nn as nn
 
 from model_zoo import rdn, rrdb, srresnet, srcnn
+from utils.config import Config
 
 
-def get_model(d: Dict) -> nn.Module:
-    scale = d["scale"]
+def get_model(cfg: Config) -> nn.Module:
+    scale = cfg.general.scale
 
-    model_type = d["model"].lower()
+    model_type = cfg.model.type.lower()
     if model_type == "srcnn":
         return srcnn.SRCNN(num_channels=3, scale=scale)
     elif model_type == "srresnet":

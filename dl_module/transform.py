@@ -1,15 +1,12 @@
-from typing import Dict
-
 import torchvision.transforms as tfms
 
+from utils.config import Config
 
-def get_train_val_tfms(d: Dict) -> (tfms.Compose, tfms.Compose, tfms.Compose, tfms.Compose):
-    scale = int(d["scale"])
-    validate = d["validate"]
 
-    d = d["loaders"]
+def get_train_val_tfms(cfg: Config) -> (tfms.Compose, tfms.Compose, tfms.Compose, tfms.Compose):
+    scale = cfg.general.scale
 
-    train_crop = int(d["train_crop"])
+    train_crop = cfg.training.crop
     train_tfms = tfms.Compose([
         tfms.ToTensor(),
         tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
@@ -25,8 +22,8 @@ def get_train_val_tfms(d: Dict) -> (tfms.Compose, tfms.Compose, tfms.Compose, tf
     ])
 
     val_tfms, val_noise_tfms = None, None
-    if validate:
-        validation_crop = int(d["validation_crop"])
+    if hasattr(cfg, "validation"):
+        validation_crop = cfg.validation.crop
         val_tfms = tfms.Compose([
             tfms.ToTensor(),
             tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
@@ -42,10 +39,13 @@ def get_train_val_tfms(d: Dict) -> (tfms.Compose, tfms.Compose, tfms.Compose, tf
     return train_tfms, train_noise_tfms, val_tfms, val_noise_tfms
 
 
-def get_test_tfms(d: Dict) -> tfms.Compose:
+def get_test_tfms(cfg: Config) -> tfms.Compose:
     test_tfms = tfms.Compose([
         tfms.ToTensor(),
         tfms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
     ])
 
     return test_tfms
+
+def get_inference_tfms(cfg: Config) -> tfms.Compose:
+    return get_test_tfms(cfg)

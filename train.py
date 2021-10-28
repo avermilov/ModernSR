@@ -1,77 +1,73 @@
 import pytorch_lightning
 import pytorch_lightning as pl
 from pytorch_lightning import loggers as pl_loggers
-
-import json
-import argparse
-
 from pytorch_lightning.callbacks import LearningRateMonitor
 
-from dl_module.loss import get_loss
-from dl_module.model import get_model
-from dl_module.dataset import get_train_val_ds, get_test_ds
+from dl_module.callbacks import get_checkpont_callback
+from dl_module.dataset import get_train_val_ds, get_test_ds, get_inference_ds
 from dl_module.loader import get_train_val_loader, get_test_loader
-from dl_module.transform import get_train_val_tfms, get_test_tfms
+from dl_module.loss import get_criterion
+from dl_module.model import get_model
 from dl_module.scheduler import get_optimizer_and_scheduler
 from dl_module.srmodule import LitSuperResolutionModule
-from dl_module.checkpoint import get_checkpont_callback
-
-
-def get_parser() -> argparse.ArgumentParser:
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument("json", type=str,
-                           help="Parameter file for training Super Resolution models.")
-
-    return argparser
-
+from dl_module.transform import get_train_val_tfms, get_test_tfms, get_inference_tfms
+from inference import inference
+from utils.config import Config
+from utils.parser import get_train_parser
 
 if __name__ == "__main__":
-    parser = get_parser()
+    parser = get_train_parser()
     args = parser.parse_args()
 
-    with open(args.json, "r") as file:
-        params = json.load(file)
+    cfg = Config(args.config)
 
-    seed = params["seed"]
-    if seed is not None:
-        pytorch_lightning.seed_everything(seed, workers=True)
+    if cfg.general.seed is not None:
+        pytorch_lightning.seed_everything(cfg.general.seed, workers=True)
 
-    train_tfms, train_noise_tfms, val_tfms, val_noise_tfms = get_train_val_tfms(params)
-    train_ds, val_ds = get_train_val_ds(params,
+    train_tfms, train_noise_tfms, val_tfms, val_noise_tfms = get_train_val_tfms(cfg)
+    train_ds, val_ds = get_train_val_ds(cfg,
                                         train_tfms, train_noise_tfms,
                                         val_tfms, val_noise_tfms)
 
-    train_loader, val_loader = get_train_val_loader(params, train_ds, val_ds)
+    train_loader, val_loader = get_train_val_loader(cfg, train_ds, val_ds)
 
-    sr_model = get_model(params)
+    sr_model = get_model(cfg)
 
-    loss = get_loss(params)
+    criterion = get_criterion(cfg)
 
-    optimizer, scheduler = get_optimizer_and_scheduler(params, sr_model, train_loader)
+    optimizer, scheduler = get_optimizer_and_scheduler(cfg, sr_model, train_loader)
 
-    checkpoint_callback = get_checkpont_callback(params)
+    checkpoint_callback = get_checkpont_callback(cfg)
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
 
-    litmodel = LitSuperResolutionModule(scale=params["scale"],
+    litmodel = LitSuperResolutionModule(scale=cfg.general.scale,
                                         sr_model=sr_model,
-                                        criterion=loss,
+                                        criterion=criterion,
                                         optimizer=optimizer,
                                         scheduler=scheduler,
-                                        val_img_log_count=params["logging"]["val_img_log_count"],
-                                        log_metrics=params["logging"]["log_metrics"],
+                                        val_img_log_count=cfg.logging.image_log_count,
+                                        log_metrics=cfg.logging.log_metrics,
                                         )
 
-    trainer = pl.Trainer(gpus=[0], max_epochs=params["epochs"],
-                         logger=pl_loggers.TensorBoardLogger(save_dir=params["logging"]["run_dir"],
+    trainer = pl.Trainer(gpus=[0], max_epochs=cfg.general.epochs,
+                         logger=pl_loggers.TensorBoardLogger(save_dir=cfg.logging.run_dir,
                                                              default_hp_metric=False),
                          deterministic=True,
-                         log_every_n_steps=1,
-                         callbacks=[lr_monitor, checkpoint_callback])
+                         log_every_n_steps=cfg.logging.log_every_n_steps,
+                         callbacks=[lr_monitor, checkpoint_callback], default_root_dir="haha")
     trainer.fit(litmodel, train_loader, val_loader)
 
-    if params["test"]:
-        test_tfms = get_test_tfms(params)
-        test_ds = get_test_ds(params, test_tfms)
-        test_loader = get_test_loader(params, test_ds)
+    if hasattr(cfg, "test"):
+        test_tfms = get_test_tfms(cfg)
+        test_ds = get_test_ds(cfg, test_tfms)
+        test_loader = get_test_loader(cfg, test_ds)
 
         trainer.test(dataloaders=test_loader, ckpt_path="best")
+
+    if hasattr(cfg, "inference"):
+        inference_tfms = get_inference_tfms(cfg)
+        inference_ds = get_inference_ds(cfg, inference_tfms)
+        inference_loader = get_test_loader(cfg, inference_ds)
+
+        sr_model = litmodel.sr_model
+        inference(sr_model, inference_loader)

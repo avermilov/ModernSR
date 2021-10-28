@@ -1,21 +1,21 @@
-from typing import Dict
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
+from utils.config import Config
 
-def get_optimizer_and_scheduler(d: Dict, model: nn.Module, dataloader: DataLoader = None):
-    epochs = int(d["epochs"])
-    learning_rate = float(d["lr"])
+
+def get_optimizer_and_scheduler(cfg: Config, model: nn.Module, dataloader: DataLoader = None):
+    epochs = cfg.general.epochs
+    learning_rate = cfg.training.learning_rate
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, betas=(0.5, 0.999))
 
-    d = d["scheduler"]
 
-    scheduler_type = d["type"].lower()
+    scheduler = cfg.training.scheduler
+    scheduler_type = scheduler["type"].lower()
     if scheduler_type == "decay":
-        gamma = float(d["gamma"])
+        gamma = float(scheduler["gamma"])
         return optimizer, optim.lr_scheduler.ExponentialLR(optimizer=optimizer, gamma=gamma)
     elif scheduler_type == "onecycle":
         scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, max_lr=learning_rate,

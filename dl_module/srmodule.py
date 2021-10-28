@@ -1,28 +1,17 @@
 import warnings
 
-import pytorch_lightning
-import torchmetrics
-
-from dl_module.loss import VGGPerceptual
-
-if True:
-    warnings.filterwarnings("ignore")
+warnings.filterwarnings("ignore")
 
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
-import torchvision
-import torchvision.transforms as tfms
-from pytorch_lightning import loggers as pl_loggers
-from torch import nn
-from torch.optim.lr_scheduler import ExponentialLR
-from torch.utils.data import DataLoader
-
-from dl_module.model import get_model
-from dl_module.dataset import SuperResolutionDataset
+import torchmetrics
 import lpips
+from settings import DEVICE
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+LPIPS_ALEX_FN = lpips.LPIPS(net="alex", verbose=False).to(DEVICE)
+LPIPS_VGG_FN = lpips.LPIPS(net="vgg", verbose=False).to(DEVICE)
+PSNR_FN = torchmetrics.PSNR().to(DEVICE)
 
 
 class LitSuperResolutionModule(pl.LightningModule):
@@ -49,11 +38,6 @@ class LitSuperResolutionModule(pl.LightningModule):
         self.logged_val_images = self.logged_test_images = 0
 
         self.log_metrics = log_metrics
-        if log_metrics:
-            self.lpips_alex = lpips.LPIPS(net="alex", verbose=False).to(DEVICE)
-            self.lpips_vgg = lpips.LPIPS(net="vgg", verbose=False).to(DEVICE)
-            # self.ssim = torchmetrics.SSIM()
-            self.psnr = torchmetrics.PSNR()
 
     def forward(self, x):
         y_hat = self.sr_model(x)
@@ -135,10 +119,10 @@ class LitSuperResolutionModule(pl.LightningModule):
             self.logged_val_images += 1
 
     def _log_metrics(self, sr, gt) -> None:
-        psnr_score = self.psnr(sr, gt)
+        psnr_score = PSNR_FN(sr, gt)
         # ssim_score = self.ssim(sr, gt)
-        lpips_alex_score = torch.mean(self.lpips_alex(sr, gt))
-        lpips_vgg_score = torch.mean(self.lpips_vgg(sr, gt))
+        lpips_alex_score = torch.mean(LPIPS_ALEX_FN(sr, gt))
+        lpips_vgg_score = torch.mean(LPIPS_VGG_FN(sr, gt))
 
         self.log("Validation Metrics/Step Wise/PSNR", psnr_score, on_step=True, on_epoch=False)
         # self.log("Metrics/SSIM", ssim_score)

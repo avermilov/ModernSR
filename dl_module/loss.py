@@ -1,23 +1,21 @@
-from typing import Dict
-
 import torch
-import torchvision
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
+import torchvision
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+from settings import DEVICE
+from utils.config import Config
 
 
-def get_loss(d: Dict) -> nn.Module:
-    d = d["loss"]
-    loss_type = d["type"].lower()
+
+def get_criterion(cfg: Config) -> nn.Module:
+    loss = cfg.training.loss
+    loss_type = loss["type"].lower()
     if loss_type == "l1":
         return nn.L1Loss()
     elif loss_type == "vgg":
         return VGGPerceptual(l1_coeff=0, vgg_coeff=1)
     elif loss_type == "perceptual":
-        return VGGPerceptual(l1_coeff=float(d["l1_coeff"]), vgg_coeff=float(d["vgg_coeff"]))
+        return VGGPerceptual(l1_coeff=float(loss["l1_coeff"]), vgg_coeff=float(loss["vgg_coeff"]))
     else:
         raise ValueError(f"Unknown loss type: {loss_type}.")
 
