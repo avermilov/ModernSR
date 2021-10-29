@@ -5,13 +5,14 @@ from pytorch_lightning.callbacks import LearningRateMonitor
 
 from dl_module.callbacks import get_checkpont_callback
 from dl_module.dataset import get_train_val_ds, get_test_ds, get_inference_ds
-from dl_module.loader import get_train_val_loader, get_test_loader
+from dl_module.loader import get_train_val_loader, get_test_loader, get_inference_loader
 from dl_module.loss import get_criterion
 from dl_module.model import get_model
 from dl_module.scheduler import get_optimizer_and_scheduler
 from dl_module.srmodule import LitSuperResolutionModule
 from dl_module.transform import get_train_val_tfms, get_test_tfms, get_inference_tfms
 from inference import inference
+from settings import DEVICE
 from utils.config import Config
 from utils.parser import get_train_parser
 
@@ -49,12 +50,19 @@ if __name__ == "__main__":
                                         log_metrics=cfg.logging.log_metrics,
                                         )
 
+    callbacks = [lr_monitor]
+    if hasattr(cfg, "validation"):
+        callbacks.append(checkpoint_callback)
+    resume_checkpoint = None
+    if hasattr(cfg.training, "resume_checkpoint"):
+        resume_checkpoint = cfg.training.resume_checkpoint
     trainer = pl.Trainer(gpus=[0], max_epochs=cfg.general.epochs,
                          logger=pl_loggers.TensorBoardLogger(save_dir=cfg.logging.run_dir,
                                                              default_hp_metric=False),
                          deterministic=True,
                          log_every_n_steps=cfg.logging.log_every_n_steps,
-                         callbacks=[lr_monitor, checkpoint_callback], default_root_dir="haha")
+                         callbacks=callbacks,
+                         resume_from_checkpoint=resume_checkpoint)
     trainer.fit(litmodel, train_loader, val_loader)
 
     if hasattr(cfg, "test"):
@@ -67,7 +75,8 @@ if __name__ == "__main__":
     if hasattr(cfg, "inference"):
         inference_tfms = get_inference_tfms(cfg)
         inference_ds = get_inference_ds(cfg, inference_tfms)
-        inference_loader = get_test_loader(cfg, inference_ds)
+        inference_loader = get_inference_loader(cfg, inference_ds)
 
         sr_model = litmodel.sr_model
-        inference(sr_model, inference_loader)
+        sr_model.to(DEVICE)
+        inference(sr_model, inference_loader, cfg.inference.out_dir)

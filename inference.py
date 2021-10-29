@@ -20,7 +20,7 @@ from utils.parser import get_inference_parser
 from settings import DEVICE
 
 
-def inference(sr_model: nn.Module, inference_loader: DataLoader):
+def inference(sr_model: nn.Module, inference_loader: DataLoader, out_dir: str):
     sr_model.eval()
     total_processed = 0
     with torch.no_grad():
@@ -31,7 +31,7 @@ def inference(sr_model: nn.Module, inference_loader: DataLoader):
 
             for i in range(pred.shape[0]):
                 torchvision.utils.save_image(pred[i],
-                                             os.path.join(cfg.inference.out_dir, f"image_{total_processed:05}.png"))
+                                             os.path.join(out_dir, f"image_{total_processed:05}.png"))
 
                 total_processed += 1
 
@@ -61,6 +61,7 @@ if __name__ == "__main__":
 
     sr_model = get_model(cfg)
     model_weights = torch.load(cfg.inference.checkpoint_path)["state_dict"]
+    # Hack for loading weights
     model_weights = {key.replace("sr_model.", ""): value for key, value in model_weights.items()}
     sr_model.load_state_dict(model_weights, strict=False)
     sr_model.to(DEVICE)
@@ -69,4 +70,4 @@ if __name__ == "__main__":
     inference_ds = get_inference_ds(cfg, inference_tfms)
     inference_loader = get_inference_loader(cfg, inference_ds)
 
-    inference(sr_model, inference_loader)
+    inference(sr_model, inference_loader, cfg.inference.out_dir)

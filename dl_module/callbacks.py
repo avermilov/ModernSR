@@ -23,7 +23,7 @@ def get_checkpont_callback(cfg: Config) -> ModelCheckpoint:
         save_top_k=save_top_k,
         mode=mode,
         auto_insert_metric_name=False,
-        save_weights_only=True
+        save_weights_only=False
     )
 
     return checkpoint_callback

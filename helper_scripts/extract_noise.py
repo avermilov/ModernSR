@@ -52,4 +52,6 @@ if __name__ == "__main__":
 
     if args.dest_dir[-1] != "/":
         args.dest_dir += "/"
-    extract_noise(args.source_dir, args.dest_dir, args.noise_level, args.window_size, args.blur_kernel_size, args.operation)
+
+    extract_noise(args.source_dir, args.dest_dir, args.noise_level,
+                  args.window_size, args.blur_kernel_size, args.operation)
