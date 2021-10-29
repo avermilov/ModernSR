@@ -29,3 +29,13 @@ def get_inference_parser() -> argparse.ArgumentParser:
                            help="Model type to be used for inference.")
 
     return argparser
+
+
+def get_split_parser() -> argparse.ArgumentParser:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("src_dir", type=str,
+                           help="Noise or kernels  to be moved")
+    argparser.add_argument("train_share", type=float,
+                           help="Percentage of files to be used for training")
+
+    return argparser
