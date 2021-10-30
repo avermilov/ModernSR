@@ -21,8 +21,8 @@ def get_train_val_ds(cfg: Config,
     scale = cfg.general.scale
 
     train_dir = cfg.training.image_dir
-    train_kernels_dir = getattr(cfg, "training.kernel_dir", None)
-    train_noises_dir = getattr(cfg, "training.noise_dir", None)
+    train_kernels_dir = getattr(cfg.training, "kernel_dir", None)
+    train_noises_dir = getattr(cfg.training, "noise_dir", None)
     train_ds = SuperResolutionDataset(scale=scale,
                                       image_dir=train_dir,
                                       noises_dir=train_noises_dir,
@@ -33,8 +33,8 @@ def get_train_val_ds(cfg: Config,
     val_ds = None
     if hasattr(cfg, "validation"):
         validation_dir = cfg.validation.image_dir
-        validation_kernels_dir = getattr(cfg, "validation.kernel_dir", None)
-        validation_noises_dir = getattr(cfg, "validation.noise_dir", None)
+        validation_kernels_dir = getattr(cfg.validation, "kernel_dir", None)
+        validation_noises_dir = getattr(cfg.validation, "noise_dir", None)
         val_ds = SuperResolutionDataset(scale=scale,
                                         image_dir=validation_dir,
                                         noises_dir=validation_noises_dir,

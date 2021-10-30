@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     cfg = Config(args.config)
 
-    if cfg.general.seed is not None:
+    if hasattr(cfg.general, "seed"):
         pytorch_lightning.seed_everything(cfg.general.seed, workers=True)
 
     train_tfms, train_noise_tfms, val_tfms, val_noise_tfms = get_train_val_tfms(cfg)

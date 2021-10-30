@@ -64,7 +64,7 @@ def get_concat_videos_parser() -> argparse.ArgumentParser:
     argparser.add_argument("vid1", type=str, default=None,
                            help="First video.")
     argparser.add_argument("vid2", type=str, default=None,
-                           help="Second video")
+                           help="Second video.")
     argparser.add_argument("--stack", type=str, default="v", choices=["h", "v"],
                            help="Stack videos vertically or horizontally.")
 
