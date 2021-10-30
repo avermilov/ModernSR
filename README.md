@@ -4,6 +4,12 @@
 This is a small custom deep learning x2/x4 Video/Image Super Resolution framework that I wrote during my second year at uni, designed to be easy to use and customizable.
 You can use it to train, validate, test and inference your Super Resolution models, as well as do a bit of data preparation and data viewing. **NOTE: this framework does not use GANs.**
 
+Below are some examples of bicubic interpolation vs trained model outputs:
+![](readme_images/z0000.png)
+![](readme_images/z0003.png)
+![](readme_images/z0011.png)
+![](readme_images/z0019.png)
+
 ## Models
 There are several models available for training:
 [SR CNN](https://arxiv.org/abs/1501.00092), [SR ResNet](https://arxiv.org/abs/1609.04802), [Residual Dense Network](https://arxiv.org/abs/1802.08797), [Residual in Residual Dense Block](https://arxiv.org/abs/1809.00219). Model code was collected from other repositories and was not created by me (duh!). Recommended architecture is Residual Dense Network.
@@ -19,7 +25,9 @@ To create pair images for training data, you can use several approaches:
 
 ## Logging 
 Tensorboard is used for logging. Below is an example of how a run log works:
-
+![](readme_images/losses.png)
+![](readme_images/metrics.png)
+![](readme_images/image.png)
 
 ## Configs
 All training (and optionally inference) information and parameters is stored in and taken from configs.
