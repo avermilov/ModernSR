@@ -39,3 +39,57 @@ def get_split_parser() -> argparse.ArgumentParser:
                            help="Percentage of files to be used for training")
 
     return argparser
+
+
+def get_extract_noise_parser() -> argparse.ArgumentParser:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("--src_dir", type=str, default=None,
+                           help="Image directory from which content is to be used.")
+    argparser.add_argument("--dest_dir", type=str, default=None,
+                           help="Directory in which to save the results.")
+    argparser.add_argument("--noise_level", type=int, default=3,
+                           help="How strong extracted noise should be.")
+    argparser.add_argument("--window_size", type=int, default=7,
+                           help="Size of window to be used for computing average.")
+    argparser.add_argument("--blur_kernel_size", type=int, default=0,
+                           help="Size of blur kernel to be used.")
+    argparser.add_argument("--operation", type=str, default="noise",
+                           help="Operation to be done: extract noise or denoise images.")
+
+    return argparser
+
+
+def get_concat_videos_parser() -> argparse.ArgumentParser:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("vid1", type=str, default=None,
+                           help="First video.")
+    argparser.add_argument("vid2", type=str, default=None,
+                           help="Second video")
+    argparser.add_argument("--stack", type=str, default="v", choices=["h", "v"],
+                           help="Stack videos vertically or horizontally.")
+
+    return argparser
+
+
+def get_make_film_dataset_parser() -> argparse.ArgumentParser:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("src_path", type=str, default=None,
+                           help="Path to film video to be used.")
+    argparser.add_argument("dest_dir", type=str, default=None,
+                           help="Directory in which results are to be saved.")
+    argparser.add_argument("frequency", type=int, default=None,
+                           help="How often (in frames) a frame should be saved.")
+    argparser.add_argument("--prefix", type=str, default="img",
+                           help="Image prefix.")
+
+    return argparser
+
+
+def get_visualize_kernels_parser() -> argparse.ArgumentParser:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("src_dir", type=str,
+                           help="Source kernels directory to be used.")
+    argparser.add_argument("dest_dir", type=str,
+                           help="Directory in which resulting images are to be put.")
+
+    return argparser

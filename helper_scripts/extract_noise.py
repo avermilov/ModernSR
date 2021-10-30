@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 
 from dl_module.dataset import ImageFolderDataset
+from utils.parser import get_extract_noise_parser
 
 
 def extract_noise(source_dir: str, dest_dir: str, noise_level: int, window_size: int, kernel_size: int,
@@ -35,13 +36,7 @@ def extract_noise(source_dir: str, dest_dir: str, noise_level: int, window_size:
 
 
 if __name__ == "__main__":
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument("--source_dir", type=str, default=None)
-    argparser.add_argument("--dest_dir", type=str, default=None)
-    argparser.add_argument("--noise_level", type=int, default=None)
-    argparser.add_argument("--window_size", type=int, default=7)
-    argparser.add_argument("--blur_kernel_size", type=int, default=0)
-    argparser.add_argument("--operation", type=str, default="noise")
+    argparser = get_extract_noise_parser()
     args = argparser.parse_args()
 
     if args.source_dir is None or args.dest_dir is None:

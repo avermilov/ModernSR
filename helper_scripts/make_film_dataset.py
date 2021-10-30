@@ -1,31 +1,28 @@
 import cv2
-import argparse
-
 from tqdm import tqdm
 
-argparser = argparse.ArgumentParser()
-argparser.add_argument("--source_path", type=str, default=None)
-argparser.add_argument("--dest_dir", type=str, default=None)
-argparser.add_argument("--prefix", type=str, default="img")
-argparser.add_argument("--frequency", type=int, default=None)
-args = argparser.parse_args()
+from utils.parser import get_make_film_dataset_parser
 
-source_path, dest_dir, frequency, prefix = args.source_path, args.dest_dir, args.frequency, args.prefix
+if __name__ == "__main__":
+    argparser = get_make_film_dataset_parser()
+    args = argparser.parse_args()
 
-if source_path is None or frequency is None:
-    raise ValueError("Both film file path and destination folder must be specified.")
+    source_path, dest_dir, frequency, prefix = args.source_path, args.dest_dir, args.frequency, args.prefix
 
-if frequency is None:
-    raise ValueError("Sampling frequency must be specified.")
+    if source_path is None or frequency is None:
+        raise ValueError("Both film file path and destination folder must be specified.")
 
-if dest_dir[-1] != "/":
-    dest_dir += "/"
+    if frequency is None:
+        raise ValueError("Sampling frequency must be specified.")
 
-cap = cv2.VideoCapture(source_path)
+    if dest_dir[-1] != "/":
+        dest_dir += "/"
 
-for i in tqdm(range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))), desc="Frames"):
-    suc, img = cap.read()
-    if not suc:
-        raise Exception("Couldn't read frame:", i)
-    if i % frequency == 0:
-        cv2.imwrite(dest_dir + prefix + f"{i:06}.png", img)
+    cap = cv2.VideoCapture(source_path)
+
+    for i in tqdm(range(int(cap.get(cv2.CAP_PROP_FRAME_COUNT))), desc="Frames"):
+        suc, img = cap.read()
+        if not suc:
+            raise Exception("Couldn't read frame:", i)
+        if i % frequency == 0:
+            cv2.imwrite(dest_dir + prefix + f"{i:06}.png", img)
