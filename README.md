@@ -14,10 +14,69 @@ To create pair images for training data, you can use several approaches:
 - Simplest option: use interpolation to downscale an image. However, it will most likely also be the most useless one. 
 
 - More advanced: use kernels from previously extracted images similar to your target domain ones to create a LowRes image from your HighRes one. To generate the kernels, use the [KernelGAN Repository](https://github.com/sefibk/KernelGAN). The quality will most likely be much better.
-- Most adavnced: use aforementioned kernels + noise patches extracted from your target domain images to apply noise to LowRes images after downscaling them. To extract noise images from your target domain images, use the utils/extract_noise.py script.
+- Most advanced: use aforementioned kernels + noise patches extracted from your target domain images to apply noise to LowRes images after downscaling them. Original idea is from [RealSR](https://github.com/Tencent/Real-SR), however, the noise extraction method for this framework was changed to Non-Local Means Denoising. To extract noise images from your target domain images, use the utils/extract_noise.py script.
+
+
+## Logging 
+Tensorboard is used for logging. Below is an example of how a run log works:
+
+
+## Configs
+All training (and optionally inference) information and parameters is stored in and taken from configs.
+Configs have the following structure:
+```
+[General]
+scale: 2    # specify Super Resolution scale
+epochs: 4   # number of epochs for training
+seed: 12    # (optional) seed for deterministic training
+
+[Model]
+type: "rdn" # network architecture to be used
+
+[Training]
+image_dir: "/path/to/dir"         # path to training images directory
+kernel_dir: "/path/to/dir"        # path to training kernels directory
+noise_dir: "/path/to/dir"         # path to training noises directory
+batch_size: 16                    # train loader batch size
+crop: 64                          # image crop size for training
+workers: 8                        # train loader workers
+learning_rate: 3e-4               # model learning rate
+scheduler: {"type": "decay", "gamma": 0.995}                    # (optional) scheduler to be used for training ("decay" and "onecycle" available)
+loss: {"type": "perceptual", "vgg_coeff": 0.1, "l1_coeff": 1}   # loss to be used for training ("vgg", "perceptual" and "l1" available)
+resume_checkpoint: "/path/to/ckpt"                              # (optional) path to checkpoint to resume interrupted training
+
+[Validation]
+image_dir: "/path/to/dir"         # path to validation images directory
+kernel_dir: "/path/to/dir"        # path to validation kernels directory
+noise_dir: "/path/to/dir"         # path to validation noises directory
+batch_size: 16                    # validation loader batch size
+crop: 256                         # validation image center crop size
+workers: 6                        # validation loader workers
+
+[Test]
+image_dir: "/path/to/dir"         # path to test images directory
+batch_size: 1                     # test loader batch size
+workers: 2                        # test loader workers
+
+[Inference]
+checkpoint_path: "/path/to/dir"   # path to checkpoint to be used for inference
+in_dir: "/path/to/dir"            # input images directory
+out_dir: "/path/to/dir"           # result images directory
+workers: 2                        # inference loader workers
+batch_size: 1                     # inference loader batchsize
+
+[Logging]
+run_dir: "/path/to/dir"           # run log directory
+image_log_count: 30               # how many validation images to log each epoch
+save_metric: "PSNR"               # metric used for saving checkpoints
+save_top_k: 2                     # save best K checkpoints
+log_every_n_steps: 1              # log info every N steps
+log_metrics: True                 # log metrics to Tensorboard
+```
 
 ## Training
-Use the train.py script to train, validate and test your models. To begin training, pass a path to a config file to be used:
+Use the train.py script to train, validate and test your models. To specify all the needed info, configs are used and passed to the script.
+You can also resume interrupted training by specifying a resume_checkpoint field in the config \[Training\] section. **NOTE: There are some problems with the way Pytorch-Lightning logs validation after resuming, so you can expect a fix either from me or from them soon.**
 ```
 python3 train.py example_config.cfg
 ```
