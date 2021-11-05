@@ -168,7 +168,7 @@ optional arguments:
 This script allows you to easily split a data folder into train and validation folders with a given train share. 
 Example: image_dir/ --> image_dir/train/, image_dir/valid/
 ```
-usage: split_train_val.py [-h] src_dir train_share
+usage: split_train_val.py [-h] [--recursive] src_dir train_share
 
 positional arguments:
   src_dir      Noise or kernels to be moved
@@ -176,6 +176,7 @@ positional arguments:
 
 optional arguments:
   -h, --help   show this help message and exit
+  --recursive  Choose to split only files in specified directory or all subdirectories as well.
 ```
 
 ### visualize_kernels.py
