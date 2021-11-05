@@ -192,3 +192,27 @@ positional arguments:
 optional arguments:
   -h, --help  show this help message and exit
 ```
+
+
+### inference_video.py
+This script allows you to apply a trained model to a video.
+**NOTE: INFERENCING EVEN A SMALL (500 x 500) VIDEO REQUIRES A LOT OF VRAM. If inferencing fails, try to use a CPU (but it will take a lot longer!)**
+```
+usage: inference_video.py [-h] --video_path VIDEO_PATH
+                          [--compression_level COMPRESSION_LEVEL] --net_type
+                          NET_TYPE --checkpoint_path CHECKPOINT_PATH --scale
+                          SCALE --save_name SAVE_NAME
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --video_path VIDEO_PATH
+                        Path to movie file to be inferenced.
+  --compression_level COMPRESSION_LEVEL
+                        Resulting video compression level.
+  --net_type NET_TYPE   Model type to be loaded for inference.
+  --checkpoint_path CHECKPOINT_PATH
+                        Path to model checkpoint to be used for inference.
+  --scale SCALE         Scale of the inference model.
+  --save_name SAVE_NAME
+                        Save name of the resulting video.
+```
