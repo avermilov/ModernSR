@@ -1,5 +1,7 @@
 import os
+import sys
 
+sys.path.append("..")
 import matplotlib.pyplot as plt
 import scipy.io as sio
 from tqdm import tqdm

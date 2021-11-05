@@ -1,5 +1,6 @@
-import argparse
+import sys
 
+sys.path.append("..")
 import cv2
 import numpy as np
 from tqdm import tqdm
@@ -39,7 +40,7 @@ if __name__ == "__main__":
     argparser = get_extract_noise_parser()
     args = argparser.parse_args()
 
-    if args.source_dir is None or args.dest_dir is None:
+    if args.src_dir is None or args.dest_dir is None:
         raise ValueError("Both source dir and destination dir must be specified.")
 
     if args.noise_level is None:
@@ -48,5 +49,5 @@ if __name__ == "__main__":
     if args.dest_dir[-1] != "/":
         args.dest_dir += "/"
 
-    extract_noise(args.source_dir, args.dest_dir, args.noise_level,
+    extract_noise(args.src_dir, args.dest_dir, args.noise_level,
                   args.window_size, args.blur_kernel_size, args.operation)

@@ -1,3 +1,6 @@
+import sys
+
+sys.path.append("..")
 import cv2
 from tqdm import tqdm
 
@@ -7,7 +10,7 @@ if __name__ == "__main__":
     argparser = get_make_film_dataset_parser()
     args = argparser.parse_args()
 
-    source_path, dest_dir, frequency, prefix = args.source_path, args.dest_dir, args.frequency, args.prefix
+    source_path, dest_dir, frequency, prefix = args.src_path, args.dest_dir, args.frequency, args.prefix
 
     if source_path is None or frequency is None:
         raise ValueError("Both film file path and destination folder must be specified.")

@@ -37,7 +37,8 @@ def get_split_parser() -> argparse.ArgumentParser:
                            help="Noise or kernels  to be moved")
     argparser.add_argument("train_share", type=float,
                            help="Percentage of files to be used for training")
-
+    argparser.add_argument("--recursive", action='store_true',
+                           help="Choose to split only files in specified directory or all subdirectories as well.")
     return argparser
 
 

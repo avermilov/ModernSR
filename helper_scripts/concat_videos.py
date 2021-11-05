@@ -1,5 +1,6 @@
 import sys
 
+sys.path.append("..")
 import cv2
 import pyprind
 
