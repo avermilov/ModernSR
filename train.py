@@ -41,6 +41,13 @@ if __name__ == "__main__":
     checkpoint_callback = get_checkpont_callback(cfg)
     lr_monitor = LearningRateMonitor(logging_interval='epoch')
 
+    test_loader, log_frequency = None, None
+    if hasattr(cfg, "test"):
+        test_tfms = get_test_tfms(cfg)
+        test_ds = get_test_ds(cfg, test_tfms)
+        test_loader = get_test_loader(cfg, test_ds)
+        log_frequency = cfg.test.log_frequency
+
     litmodel = LitSuperResolutionModule(scale=cfg.general.scale,
                                         sr_model=sr_model,
                                         criterion=criterion,
@@ -48,14 +55,17 @@ if __name__ == "__main__":
                                         scheduler=scheduler,
                                         val_img_log_count=cfg.logging.image_log_count,
                                         log_metrics=cfg.logging.log_metrics,
-                                        )
+                                        test_loader=test_loader,
+                                        log_frequency=log_frequency)
 
     callbacks = [lr_monitor]
     if hasattr(cfg, "validation"):
         callbacks.append(checkpoint_callback)
+
     resume_checkpoint = None
     if hasattr(cfg.training, "resume_checkpoint"):
         resume_checkpoint = cfg.training.resume_checkpoint
+
     trainer = pl.Trainer(gpus=[0], max_epochs=cfg.general.epochs,
                          logger=pl_loggers.TensorBoardLogger(save_dir=cfg.logging.run_dir,
                                                              default_hp_metric=False),
@@ -65,18 +75,13 @@ if __name__ == "__main__":
                          resume_from_checkpoint=resume_checkpoint)
     trainer.fit(litmodel, train_loader, val_loader)
 
-    if hasattr(cfg, "test"):
-        test_tfms = get_test_tfms(cfg)
-        test_ds = get_test_ds(cfg, test_tfms)
-        test_loader = get_test_loader(cfg, test_ds)
+    trainer.test(dataloaders=test_loader, ckpt_path="best")
 
-        trainer.test(dataloaders=test_loader, ckpt_path="best")
+if hasattr(cfg, "inference"):
+    inference_tfms = get_inference_tfms(cfg)
+    inference_ds = get_inference_ds(cfg, inference_tfms)
+    inference_loader = get_inference_loader(cfg, inference_ds)
 
-    if hasattr(cfg, "inference"):
-        inference_tfms = get_inference_tfms(cfg)
-        inference_ds = get_inference_ds(cfg, inference_tfms)
-        inference_loader = get_inference_loader(cfg, inference_ds)
-
-        sr_model = litmodel.sr_model
-        sr_model.to(DEVICE)
-        inference(sr_model, inference_loader, cfg.inference.out_dir)
+    sr_model = litmodel.sr_model
+    sr_model.to(DEVICE)
+    inference(sr_model, inference_loader, cfg.inference.out_dir)

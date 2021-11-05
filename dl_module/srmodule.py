@@ -23,8 +23,9 @@ class LitSuperResolutionModule(pl.LightningModule):
                  scheduler,
                  log_metrics: bool = True,
                  log_images: bool = True,
-
-                 val_img_log_count: int = 10):
+                 val_img_log_count: int = 10,
+                 test_loader=None,
+                 log_frequency=None):
         super().__init__()
         self.scale = scale
         self.sr_model = sr_model
@@ -38,6 +39,11 @@ class LitSuperResolutionModule(pl.LightningModule):
         self.logged_val_images = self.logged_test_images = 0
 
         self.log_metrics = log_metrics
+
+        self.test_loader = test_loader
+        self.log_frequency = log_frequency
+        if test_loader is not None and log_frequency is None:
+            raise ValueError("Test loader passed but no log frequency specified.")
 
     def forward(self, x):
         y_hat = self.sr_model(x)
@@ -75,16 +81,21 @@ class LitSuperResolutionModule(pl.LightningModule):
 
         return loss
 
-    def on_test_start(self) -> None:
-        self.logged_test_images = 0
+    def on_validation_epoch_end(self) -> None:
+        if self.test_loader is None or self.current_epoch % self.log_frequency != 0:
+            return
 
-    def test_step(self, batch, batch_idx):
-        sr = self.sr_model(batch)
+        logged_test_images = 0
+        for imgs in self.test_loader:
+            imgs = imgs.to(DEVICE)
+            sr_imgs = self.sr_model(imgs)
+            sr_imgs = torch.clamp((sr_imgs + 1) / 2, min=0, max=1)
 
-        logger = self.logger.experiment
-        for img in sr:
-            img = torch.clamp((img + 1) / 2, min=0, max=1)
-            logger.add_image(f"Test Images/Image {self.logged_test_images}", img)
+            logger = self.logger.experiment
+            for img in sr_imgs:
+                logger.add_image(f"Test Images/Image {logged_test_images}",
+                                 img, global_step=self.current_epoch)
+                logged_test_images += 1
 
     def configure_optimizers(self):
         return [self.sr_optimizer], [self.sr_scheduler]
