@@ -94,3 +94,21 @@ def get_visualize_kernels_parser() -> argparse.ArgumentParser:
                            help="Directory in which resulting images are to be put.")
 
     return argparser
+
+
+def get_inference_video_parser() -> argparse.ArgumentParser:
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("--video_path", type=str, required=True,
+                           help="Path to movie file to be inferenced.")
+    argparser.add_argument("--compression_level", type=int, default=12,
+                           help="Resulting video compression level.")
+    argparser.add_argument("--net_type", type=str, required=True,
+                           help="Model type to be loaded for inference.")
+    argparser.add_argument("--checkpoint_path", type=str, required=True,
+                           help="Path to model checkpoint to be used for inference.")
+    argparser.add_argument("--scale", type=int, required=True,
+                           help="Scale of the inference model.")
+    argparser.add_argument("--save_name", type=str, required=True,
+                           help="Save name of the resulting video.")
+
+    return argparser
