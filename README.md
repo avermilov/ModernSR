@@ -65,6 +65,7 @@ workers: 6                        # validation loader workers
 image_dir: "/path/to/dir"         # path to test images directory
 batch_size: 1                     # test loader batch size
 workers: 2                        # test loader workers
+log_frequency: 10                 # how often (epoch wise) should test images be logged
 
 [Inference]
 checkpoint_path: "/path/to/dir"   # path to checkpoint to be used for inference
@@ -82,15 +83,15 @@ log_every_n_steps: 1              # log info every N steps
 log_metrics: True                 # log metrics to Tensorboard
 ```
 
-## Training
+## Training, Validation and Testing
 Use the train.py script to train, validate and test your models. To specify all the needed info, configs are used and passed to the script.
-You can also resume interrupted training by specifying a resume_checkpoint field in the config \[Training\] section. **NOTE: There are some problems with the way Pytorch-Lightning logs validation after resuming, so you can expect a fix either from me or from them soon.**
+You can also resume interrupted training by specifying a resume_checkpoint field in the config \[Training\] section. To perform validation, a \[Validation\] section must be specified. You can also choose to occasionally test the model by specifying the \[Test\] section in the config, which will make the model inference and log test images to Tensorboard. **NOTE: There are some problems with the way Pytorch-Lightning logs validation after resuming, so you can expect a fix either from me or from them soon.**
 ```
 python3 train.py example_config.cfg
 ```
 
 ## Inference
-Use the inference.py script to upscale images using a trained model. You can either pass a config with an inference section or specify all required arguments through the command line. **NOTE: Keep in mind that these models are quite big, so you will require a beefy GPU with enough VRAM to inference faster.**
+Use the inference.py script to upscale and save images using a trained model. You can either pass a config with an inference section or specify all required arguments through the command line. **NOTE: Keep in mind that these models are quite big, so you will require a beefy GPU with enough VRAM to inference faster. Otherwise, you'll have to use a CPU, which is significantly slower.**
 ```
 sage: inference.py [-h] [--config CONFIG] [--in_dir IN_DIR]
                     [--out_dir OUT_DIR] [--workers WORKERS]
